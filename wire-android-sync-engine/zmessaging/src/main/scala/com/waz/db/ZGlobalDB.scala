@@ -36,8 +36,10 @@ import com.waz.utils.wrappers.DB
 import com.waz.utils.{JsonDecoder, JsonEncoder, Resource}
 
 class ZGlobalDB(context: Context, dbNameSuffix: String = "", tracking: TrackingService)
-  extends DaoDB(context.getApplicationContext, DbName + dbNameSuffix, null, DbVersion, daos, Migrations.migrations(context), tracking)
+  extends DaoDB(context.getApplicationContext, DbName + dbNameSuffix, null, DbVersion, daos, tracking)
     with DerivedLogTag {
+
+  override protected def getMigrations(): Seq[Migration] = Migrations.migrations(context)
 
   override def onUpgrade(db: SQLiteDatabase, from: Int, to: Int): Unit = {
     if (from < 5) clearAllData(db)

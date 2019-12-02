@@ -31,7 +31,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object GeneralStorageTest {
 
   class TestSingleDaoDb(context: Context, databaseName: String, dao: Dao[_, _])
-    extends DaoDB(context, databaseName, null, 1, Seq(dao), migrations = Seq.empty, new DummyTrackingService())
+    extends DaoDB(context, databaseName, null, 1, Seq(dao), new DummyTrackingService())
 
 }
 

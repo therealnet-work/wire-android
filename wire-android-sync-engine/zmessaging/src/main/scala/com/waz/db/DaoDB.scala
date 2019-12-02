@@ -31,9 +31,10 @@ class DaoDB(context:    Context,
             factory:    CursorFactory,
             version:    Int,
             daos:       Seq[BaseDao[_]],
-            migrations: Seq[Migration],
             tracking:   TrackingService)
   extends SQLiteOpenHelper(context, name, factory, version) with DerivedLogTag {
+
+  protected def getMigrations(): Seq[Migration] = Seq.empty
 
   override def onConfigure(db: SQLiteDatabase): Unit = {
     super.onConfigure(db)
@@ -68,7 +69,7 @@ class DaoDB(context:    Context,
   }
 
   override def onUpgrade(db: SQLiteDatabase, from: Int, to: Int): Unit =
-    new Migrations(migrations: _*)(tracking).migrate(this, from, to)(db)
+    new Migrations(getMigrations(): _*)(tracking).migrate(this, from, to)(db)
 
   def dropAllTables(db: SQLiteDatabase): Unit =
     daos.foreach { dao =>

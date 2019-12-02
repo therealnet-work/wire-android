@@ -35,7 +35,7 @@ class MigrationsSpec extends FeatureSpec with Matchers with BeforeAndAfter with 
 
   def testMigration(from: Int, to: Int) = Migration(from, to) { _ => appliedMigrations.append(from -> to) }
 
-  lazy val testDaoDb = new DaoDB(Robolectric.application, "test", null, 1, Seq.empty[BaseDao[_]], Seq.empty[Migration], tracking) {
+  lazy val testDaoDb = new DaoDB(Robolectric.application, "test", null, 1, Seq.empty[BaseDao[_]], tracking) {
 
     override def dropAllTables(db: SQLiteDatabase): Unit = dropAllCalled = true
   }

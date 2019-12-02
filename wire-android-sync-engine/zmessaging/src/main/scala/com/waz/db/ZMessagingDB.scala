@@ -39,21 +39,20 @@ import com.waz.model.MsgDeletion.MsgDeletionDao
 import com.waz.model.NotificationData.NotificationDataDao
 import com.waz.model.PushNotificationEvents.PushNotificationEventsDao
 import com.waz.model.ReadReceipt.ReadReceiptDao
-import com.waz.model.TeamData.TeamDataDao
 import com.waz.model.UserData.UserDataDao
 import com.waz.model._
 import com.waz.model.otr.UserClients.UserClientsDao
 import com.waz.model.sync.SyncJob.SyncJobDao
+import com.waz.repository.FCMNotificationStatsRepository.FCMNotificationStatsDao
+import com.waz.repository.FCMNotificationsRepository.FCMNotificationsDao
 import com.waz.service.assets2.AssetStorageImpl.AssetDao
 import com.waz.service.assets2.DownloadAssetStorage.DownloadAssetDao
 import com.waz.service.assets2.UploadAssetStorage.UploadAssetDao
-import com.waz.repository.FCMNotificationStatsRepository.FCMNotificationStatsDao
-import com.waz.repository.FCMNotificationsRepository.FCMNotificationsDao
 import com.waz.service.tracking.TrackingService
 
 import scala.util.{Success, Try}
 
-class ZMessagingDB(context: Context, dbName: String, tracking: TrackingService) extends DaoDB(context.getApplicationContext, dbName, null, DbVersion, daos, migrations, tracking) {
+class ZMessagingDB(context: Context, dbName: String, tracking: TrackingService) extends DaoDB(context.getApplicationContext, dbName, null, DbVersion, daos, tracking) {
 
   override def onUpgrade(db: SQLiteDatabase, from: Int, to: Int): Unit = {
     if (from < 60) {
@@ -61,14 +60,17 @@ class ZMessagingDB(context: Context, dbName: String, tracking: TrackingService) 
       onCreate(db)
     } else super.onUpgrade(db, from, to)
   }
+
+  override protected def getMigrations(): Seq[Migration] =
+    migrations :+ new UserPrefsRoomMigration(124, 125, context, dbName)
 }
 
 object ZMessagingDB {
-  val DbVersion = 124
+  val DbVersion = 125
 
   lazy val daos = Seq (
     UserDataDao, AssetDataDao, ConversationDataDao, ConversationMemberDataDao,
-    MessageDataDao, KeyValueDataDao, SyncJobDao, ErrorDataDao, NotificationDataDao,
+    MessageDataDao, SyncJobDao, ErrorDataDao, NotificationDataDao,
     ContactHashesDao, ContactsOnWireDao, UserClientsDao, LikingDao, ContactsDao, EmailAddressesDao,
     PhoneNumbersDao, MsgDeletionDao, EditHistoryDao, MessageContentIndexDao,
     PushNotificationEventsDao, ReadReceiptDao, PropertiesDao, UploadAssetDao, DownloadAssetDao,

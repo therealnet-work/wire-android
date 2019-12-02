@@ -20,7 +20,7 @@ package com.waz.model
 import java.util.UUID.randomUUID
 
 import com.waz.DisabledTrackingService
-import com.waz.db.{BaseDao, Dao, DaoDB, Table, ZMessagingDB}
+import com.waz.db.{BaseDao, Dao, DaoDB, Table}
 import com.waz.utils.wrappers.{DB, DBCursor}
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -43,7 +43,7 @@ class BaseDaoSpec extends FeatureSpec with Matchers with RobolectricTests {
   def dummyData(size: Int): Seq[TestModel] = (0 until size).map(_ => TestModel(Uid()))
 
   def withDB(f: DB => Unit): Unit = {
-    val dbHelper = new DaoDB(Robolectric.application, s"testDB-$randomUUID", null, 1, List(TestDao), List.empty, DisabledTrackingService)
+    val dbHelper = new DaoDB(Robolectric.application, s"testDB-$randomUUID", null, 1, List(TestDao), DisabledTrackingService)
     try f(dbHelper.getWritableDatabase) finally dbHelper.close()
   }
 
