@@ -49,10 +49,12 @@ import com.waz.service.assets2.AssetStorageImpl.AssetDao
 import com.waz.service.assets2.DownloadAssetStorage.DownloadAssetDao
 import com.waz.service.assets2.UploadAssetStorage.UploadAssetDao
 import com.waz.service.tracking.TrackingService
+import com.wire.roomdb.UserDatabase
 
 import scala.util.{Success, Try}
 
-class ZMessagingDB(context: Context, dbName: String, tracking: TrackingService) extends DaoDB(context.getApplicationContext, dbName, null, DbVersion, daos, tracking) {
+class ZMessagingDB(context: Context, dbName: String, tracking: TrackingService, userRoomDb: UserDatabase)
+  extends DaoDB(context.getApplicationContext, dbName, null, DbVersion, daos, tracking) {
 
   override def onUpgrade(db: SQLiteDatabase, from: Int, to: Int): Unit = {
     if (from < 60) {
@@ -62,7 +64,7 @@ class ZMessagingDB(context: Context, dbName: String, tracking: TrackingService) 
   }
 
   override protected def getMigrations(): Seq[Migration] =
-    migrations :+ new UserPrefsRoomMigration(124, 125, context, dbName)
+    migrations :+ new UserPrefsRoomMigration(124, 125, context, userRoomDb)
 }
 
 object ZMessagingDB {

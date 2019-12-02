@@ -21,6 +21,7 @@ import android.content.ContentValues
 import android.database.DatabaseUtils
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteDatabase._
+import androidx.room.Room
 import com.waz.{DisabledTrackingService, Generators}
 import com.waz.utils.wrappers.{DB, URI}
 import com.waz.api.{ContentSearchQuery, Message}
@@ -34,6 +35,7 @@ import com.waz.model._
 import com.waz.model.sync.SyncJob.SyncJobDao
 import com.waz.model.sync.{SyncCommand, SyncJob}
 import com.waz.utils.{DbLoader, returning}
+import com.wire.roomdb.UserDatabase
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.scalatest._
@@ -43,7 +45,8 @@ import org.threeten.bp.Instant
 
 @RunWith(classOf[JUnitRunner])
 @Ignore class ZMessagingDBSpec extends FeatureSpec with Matchers with Inspectors with GeneratorDrivenPropertyChecks with BeforeAndAfter with RobolectricTests with DbLoader {
-  lazy val dbHelper = new ZMessagingDB(Robolectric.application, "test_db", DisabledTrackingService)
+  lazy val userRoomDb = Room.inMemoryDatabaseBuilder(Robolectric.application, classOf[UserDatabase]).build()
+  lazy val dbHelper = new ZMessagingDB(Robolectric.application, "test_db", DisabledTrackingService, userRoomDb)
 
   after {
     dbHelper.close()

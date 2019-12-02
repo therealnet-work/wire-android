@@ -17,11 +17,13 @@
  */
 package com.waz.db
 
+import androidx.room.Room
 import com.waz.DisabledTrackingService
 import com.waz.model.KeyValueData.KeyValueDataDao
 import com.waz.model._
 import com.waz.utils.DbLoader
 import com.waz.utils.wrappers.DB
+import com.wire.roomdb.UserDatabase
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.scalatest._
@@ -41,7 +43,8 @@ class ZGlobalDBSpec extends FeatureSpec with Matchers with OptionValues with Ins
   feature("Database migrations") {
 
     def createZmessagingDb(id: AccountId, userId: UserId) = {
-      val zdb = new ZMessagingDB(Robolectric.application, id.str, DisabledTrackingService)
+      val userRoomDb = Room.inMemoryDatabaseBuilder(Robolectric.application, classOf[UserDatabase]).build()
+      val zdb = new ZMessagingDB(Robolectric.application, id.str, DisabledTrackingService, userRoomDb)
       implicit val db: DB  = zdb.getWritableDatabase
       KeyValueDataDao.insertOrIgnore(KeyValueData("self_user_id", userId.str))
       db.close()

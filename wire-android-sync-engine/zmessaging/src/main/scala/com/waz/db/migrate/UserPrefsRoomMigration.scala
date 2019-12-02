@@ -32,12 +32,12 @@ import com.wire.roomdb.{UserDatabase, UserPreference}
   * @param fromVersion prev version of the SQLite database.
   * @param toVersion next version of the SQLite database.
   * @param context context
-  * @param dbName name of the legacy database. Required to distinguish between different users' preferences.
+  * @param userRoomDb instance of the room database for respective user.
   */
 class UserPrefsRoomMigration(override val fromVersion: Int,
                              override val toVersion: Int,
                              context: Context,
-                             dbName: String)
+                             userRoomDb: UserDatabase)
     extends Migration {
 
   override def apply(db: DB): Unit = {
@@ -52,8 +52,7 @@ class UserPrefsRoomMigration(override val fromVersion: Int,
 
       Executors.newSingleThreadExecutor().execute(new Runnable {
         override def run(): Unit = {
-          UserDatabase.getInstance(context, dbName)
-            .userPreferencesDao()
+          userRoomDb.userPreferencesDao()
             .insert(keyValues)
         }
       })
