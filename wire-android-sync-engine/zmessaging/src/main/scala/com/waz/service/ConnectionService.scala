@@ -129,7 +129,7 @@ class ConnectionServiceImpl(selfUserId:      UserId,
           case None if conv.convType == ConversationType.Incoming =>
             val userId = convToUser(conv.id)
             val user = eventMap(userId).user
-            messages.addConnectRequestMessage(conv.id, user.id, selfUserId, user.connectionMessage.getOrElse(""), user.getDisplayName, fromSync = eventMap(userId).fromSync)
+            messages.addConnectRequestMessage(conv.id, user.id, selfUserId, user.connectionMessage.getOrElse(""), user.displayName, fromSync = eventMap(userId).fromSync)
           case None if conv.convType == ConversationType.OneToOne =>
             messages.addDeviceStartMessages(Seq(conv), selfUserId)
           case _ =>

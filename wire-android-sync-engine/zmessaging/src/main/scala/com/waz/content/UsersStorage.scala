@@ -136,8 +136,8 @@ class UsersStorageImpl(context: Context, storage: ZmsDatabase)
   }, "UsersDisplayNameUpdater")
 
   def updateDisplayNamesWithSameFirst(users: Seq[UserId], cs: mutable.HashMap[UserId, NameParts]): Unit = {
-    def setFullName(user: UserId) = update(user, { (u : UserData) => u.copy(displayName = u.name) })
-    def setDisplayName(user: UserId, name: String) = update(user, (_: UserData).copy(displayName = Name(name)))
+    def setFullName(user: UserId) = update(user, { (u : UserData) => u.copy(dispName = u.name) })
+    def setDisplayName(user: UserId, name: String) = update(user, (_: UserData).copy(dispName = Name(name)))
 
     if (users.isEmpty) CancellableFuture.successful(())
     else if (users.size == 1) {
@@ -147,9 +147,9 @@ class UsersStorageImpl(context: Context, storage: ZmsDatabase)
       def firstWithInitial(user: UserId) = cs.get(user).fold("")(_.firstWithInitial)
 
       users.groupBy(firstWithInitial) map {
-        case ("", us) => Future.sequence(us map setFullName)
+        case ("", us)       => Future.sequence(us.map(setFullName))
         case (name, Seq(u)) => setDisplayName(u, name)
-        case (name, us) => Future.sequence(us map setFullName)
+        case (_, us)        => Future.sequence(us.map(setFullName))
       }
     }
   }
