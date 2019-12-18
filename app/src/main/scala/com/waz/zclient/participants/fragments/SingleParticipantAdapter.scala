@@ -86,8 +86,6 @@ final class SingleParticipantAdapter(userId: UserId,
     case _                             => fields(position - 1).key.hashCode.toLong
   }
 
-  setHasStableIds(true)
-
   override def getItemViewType(position: Int): Int =
     if (position == 0) Header
     else if (position == 1 && isGroupAdminViewVisible) GroupAdmin

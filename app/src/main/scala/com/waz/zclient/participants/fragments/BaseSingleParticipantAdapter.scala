@@ -68,8 +68,7 @@ class BaseSingleParticipantAdapter(userId: UserId,
       h.bind(onParticipantRoleChange, participantRole == ConversationRole.AdminRole)
   }
 
-  override def getItemCount: Int =
-    if (isGroupAdminViewVisible) 2 else 1
+  override def getItemCount: Int = if (isGroupAdminViewVisible) 2 else 1
 
   override def getItemId(position: Int): Long = getItemViewType(position) match {
     case Header     => 0L
