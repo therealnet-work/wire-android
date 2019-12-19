@@ -38,8 +38,7 @@ class UnconnectedParticipantAdapter(userId:      UserId,
 
   def set(timerText:       Option[String],
           participantRole: ConversationRole,
-          selfRole:        ConversationRole
-         ): Unit = {
+          selfRole:        ConversationRole): Unit = {
     this.timerText       = timerText
     this.participantRole = participantRole
     this.selfRole        = selfRole

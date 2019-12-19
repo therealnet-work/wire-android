@@ -24,18 +24,20 @@ import android.widget.TextView
 import androidx.annotation.Nullable
 import androidx.recyclerview.widget.{LinearLayoutManager, RecyclerView}
 import com.google.android.material.tabs.TabLayout
-import com.waz.model.UserField
+import com.waz.model.{UserField, UserId}
 import com.waz.service.ZMessaging
 import com.waz.threading.{CancellableFuture, Threading}
 import com.waz.utils._
 import com.waz.utils.events.{ClockSignal, Signal, Subscription}
 import com.waz.zclient.common.controllers.{BrowserController, ThemeController, UserAccountsController}
+import com.waz.zclient.connect.SendConnectRequestFragment.{ArgumentUserId, ArgumentUserRequester}
 import com.waz.zclient.controllers.navigation.{INavigationController, Page}
 import com.waz.zclient.conversation.ConversationController
 import com.waz.zclient.conversation.creation.CreateConversationController
+import com.waz.zclient.messages.UsersController
 import com.waz.zclient.pages.main.MainPhoneFragment
 import com.waz.zclient.pages.main.conversation.controller.IConversationScreenController
-import com.waz.zclient.participants.{ParticipantOtrDeviceAdapter, ParticipantsController}
+import com.waz.zclient.participants.{ParticipantOtrDeviceAdapter, ParticipantsController, UserRequester}
 import com.waz.zclient.utils.{ContextUtils, GuestUtils, RichView, StringUtils}
 import com.waz.zclient.views.menus.{FooterMenu, FooterMenuCallback}
 import com.waz.zclient.{FragmentHelper, R}
@@ -182,7 +184,7 @@ class SingleParticipantFragment extends FragmentHelper {
     }
   }
 
-  private lazy val footerCallback = new FooterMenuCallback {
+  protected lazy val footerCallback = new FooterMenuCallback {
     override def onLeftActionClicked(): Unit =
       participantsController.otherParticipant.map(_.expiresAt.isDefined).head.foreach {
         case false => participantsController.isGroup.head.flatMap {
@@ -268,11 +270,8 @@ class SingleParticipantFragment extends FragmentHelper {
 
   protected def initViews(savedInstanceState: Bundle): Unit = {
     userHandle
-
     detailsView
-
     devicesView
-
     footerMenu
 
     if (Option(savedInstanceState).isEmpty) {
@@ -340,6 +339,11 @@ object SingleParticipantFragment {
 class SendConnectRequestFragment2 extends SingleParticipantFragment {
   import Threading.Implicits.Ui
 
+  private lazy val usersController = inject[UsersController]
+
+  private lazy val userToConnectId = UserId(getArguments.getString(ArgumentUserId))
+  private lazy val userRequester = UserRequester.valueOf(getArguments.getString(ArgumentUserRequester))
+
   override protected lazy val tabs = returning(view[TabLayout](R.id.details_and_devices_tabs)) {
     _.foreach { _.setVisibility(View.GONE) }
   }
@@ -347,53 +351,84 @@ class SendConnectRequestFragment2 extends SingleParticipantFragment {
   override protected lazy val readReceipts = Signal.const(Option.empty[String])
 
   override protected def initViews(savedInstanceState: Bundle): Unit = {
-    userHandle
+    tabs
     detailsView
     footerMenu
+    userHandle
   }
 
   override protected lazy val detailsView = returning( view[RecyclerView](R.id.details_recycler_view) ) { vh =>
-    vh.foreach(_.setMarginTop(ContextUtils.getDimenPx(R.dimen.wire__padding__50)))
     vh.foreach(_.setLayoutManager(new LinearLayoutManager(ctx)))
 
     (for {
-      zms                <- inject[Signal[ZMessaging]].head
-      user               <- participantsController.otherParticipant.head
-      isGroup            <- participantsController.isGroup.head
-      isGuest            =  !user.isWireBot && user.isGuest(zms.teamId)
-      isExternal         =  !user.isWireBot && user.isExternal(zms.teamId)
-      isTeamTheSame      =  !user.isWireBot && user.teamId == zms.teamId && zms.teamId.isDefined
-      // if the user is from our team we ask the backend for the rich profile (but we don't wait for it)
-      _                  =  if (isTeamTheSame) zms.users.syncRichInfoNowForUser(user.id) else Future.successful(())
-      isDarkTheme        <- inject[ThemeController].darkThemeSet.head
-      isWireless         =  user.expiresAt.isDefined
-    } yield (user.id, user.email, isGuest, isExternal, isDarkTheme, isGroup, isWireless, isTeamTheSame)).foreach {
-      case (userId, emailAddress, isGuest, isExternal, isDarkTheme, isGroup, isWireless, isTeamTheSame) =>
-        val adapter = new SingleParticipantAdapter(userId, isGuest, isExternal, isDarkTheme, isGroup, isWireless)
-        val emailUserField = emailAddress match {
-          case Some(email) => Seq(UserField(getString(R.string.user_profile_email_field_name), email.toString()))
-          case None        => Seq.empty
-        }
-
+      zms           <- inject[Signal[ZMessaging]].head
+      user          <- participantsController.otherParticipant.head
+      isGroup       <- participantsController.isGroup.head
+      isGuest       =  !user.isWireBot && user.isGuest(zms.teamId)
+      isExternal    =  !user.isWireBot && user.isExternal(zms.teamId)
+      isTeamTheSame =  !user.isWireBot && user.teamId == zms.teamId && zms.teamId.isDefined
+      isDarkTheme   <- inject[ThemeController].darkThemeSet.head
+      isWireless    =  user.expiresAt.isDefined
+    } yield (user, isGuest, isExternal, isDarkTheme, isGroup, isWireless, isTeamTheSame)).foreach {
+      case (user, isGuest, isExternal, isDarkTheme, isGroup, isWireless, isTeamTheSame) =>
+        val formattedHandle = StringUtils.formatHandle(user.handle.map(_.string).getOrElse(""))
+        val adapter = new UnconnectedParticipantAdapter(user.id, isGuest, isExternal, isDarkTheme, isGroup, isWireless, user.displayName, formattedHandle)
         subs += Signal(
-          participantsController.otherParticipant.map(_.fields),
           timerText,
-          readReceipts,
-          participantsController.participants.map(_(userId)),
+          participantsController.participants.map(_(user.id)),
           participantsController.selfRole
-        ).onUi {
-          case (fields, tt, rr, pRole, sRole) if isTeamTheSame =>
-            adapter.set(emailUserField ++ fields, tt, rr, pRole, sRole)
-          case (_, tt, rr, pRole, sRole) =>
-            adapter.set(emailUserField, tt, rr, pRole, sRole)
-        }
+        ).onUi { case (tt, pRole, sRole) => adapter.set(tt, pRole, sRole) }
 
-        subs += adapter.onParticipantRoleChange.on(Threading.Background)(participantsController.setRole(userId, _))
+        subs += adapter.onParticipantRoleChange.on(Threading.Background)(participantsController.setRole(user.id, _))
         vh.foreach(_.setAdapter(adapter))
     }
+  }
+
+  private lazy val returnPage =
+    if (userRequester == UserRequester.PARTICIPANTS || userRequester == UserRequester.DEEP_LINK)
+      Page.CONVERSATION_LIST
+    else
+      Page.PICK_USER
+
+  override protected lazy val footerCallback = new FooterMenuCallback {
+    override def onLeftActionClicked(): Unit =
+      usersController.connectToUser(userToConnectId).foreach(_.foreach { _ =>
+        navigationController.setLeftPage(returnPage, SendConnectRequestFragment2.Tag)
+        inject[IConversationScreenController].hideUser()
+      })
+
+    override def onRightActionClicked(): Unit = {}
+  }
+
+  override protected lazy val leftActionStrings = Signal.empty[(Int, Int)]
+
+  override protected lazy val footerMenu = returning( view[FooterMenu](R.id.fm__footer) ) { vh =>
+    vh.foreach { menu =>
+      menu.setLeftActionText(getString(R.string.glyph__plus))
+      menu.setLeftActionLabelText(getString(R.string.send_connect_request__connect_button__text))
+      menu.setCallback(footerCallback)
+    }
+  }
+
+  override protected lazy val userHandle = returning(view[TextView](R.id.user_handle)) { _.foreach(_.setVisible(false)) }
+
+  override def onBackPressed(): Boolean = {
+    navigationController.setLeftPage(returnPage, SendConnectRequestFragment2.Tag)
+    inject[IConversationScreenController].hideUser()
+    true
   }
 }
 
 object SendConnectRequestFragment2 {
-  def newInstance(): SendConnectRequestFragment2 = new SendConnectRequestFragment2
+  val Tag: String = classOf[SendConnectRequestFragment2].getName
+  val ArgumentUserId = "ARGUMENT_USER_ID"
+  val ArgumentUserRequester = "ARGUMENT_USER_REQUESTER"
+
+  def newInstance(userId: String, userRequester: UserRequester): SendConnectRequestFragment2 =
+    returning(new SendConnectRequestFragment2)(fragment =>
+      fragment.setArguments(returning(new Bundle) { args =>
+        args.putString(ArgumentUserId, userId)
+        args.putString(ArgumentUserRequester, userRequester.toString)
+      })
+    )
 }

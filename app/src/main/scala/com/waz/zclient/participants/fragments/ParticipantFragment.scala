@@ -254,7 +254,7 @@ class ParticipantFragment extends ManagerFragment
         openUserProfileFragment(newInstance(userId.str, UserRequester.PARTICIPANTS), Tag)
 
       case Some(user) if user.connection == CANCELLED || user.connection == UNCONNECTED =>
-        import com.waz.zclient.connect.SendConnectRequestFragment._
+        import SendConnectRequestFragment2._
         openUserProfileFragment(newInstance(userId.str, UserRequester.PARTICIPANTS), Tag)
       case _ =>
     }
