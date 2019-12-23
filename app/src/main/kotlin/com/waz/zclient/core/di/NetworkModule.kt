@@ -14,7 +14,7 @@ import com.waz.zclient.core.network.AuthTokenHandler
 import com.waz.zclient.core.network.NetworkClient
 import com.waz.zclient.core.network.NetworkHandler
 import com.waz.zclient.core.network.RetrofitClient
-import com.waz.zclient.core.network.TokenService
+import com.waz.zclient.core.network.api.token.TokenService
 import com.waz.zclient.core.threading.ThreadHandler
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
