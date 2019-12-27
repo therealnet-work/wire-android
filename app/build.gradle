@@ -9,8 +9,6 @@ apply from: 'config/quality.gradle'
 ext {
     majorVersion = "3.43."
 
-    audioVersion = System.getenv("AUDIO_VERSION") ?: '1.209.0@aar'
-
     avsVersion = '5.3.191@aar'
     avsInternalVersion = avsVersion //leave this here in case we want to test specific AVS versions on internal
     avsName = 'avs'
@@ -299,7 +297,6 @@ android {
         exclude 'LICENSE.txt'
         exclude 'META-INF/proguard/coroutines.pro'
     }
-
 }
 
 dexinfo {
@@ -309,35 +306,27 @@ dexinfo {
 def versions = [
     playServices : "17.0.0", //TODO can be independent now.
     stetho: "1.5.0",
-    workManager : "2.0.1",
     paging : "1.0.0",
-    mockito : "3.1.0",
     lifecycle : "2.2.0-rc03",
     okHttp : "3.12.0",
     retrofit : "2.6.2",
-    kluent : "1.14",
-    coroutines : "1.3.2"
 ]
 
 dependencies {
-    //    implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation "org.scala-lang:scala-library:$scalaVersion"
-    implementation "org.scala-lang:scala-reflect:$scalaVersion"
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation LegacyDependencies.scala_library
+    implementation LegacyDependencies.scala_reflect
+    implementation LegacyDependencies.scala_shapeless
 
-    implementation "com.chuusai:shapeless_$rootProject.ext.scalaMajorVersion:2.3.3"
+    implementation CoreDependencies.kotlin
+    implementation CoreDependencies.wire_audio_notifications
 
-    //wire libraries:
-    implementation "com.wire:audio-notifications:$audioVersion"
     //don't include wire translations for custom builds
     if (buildtimeConfiguration.customResourcesPath == null) {
-        implementation 'com.wire:wiretranslations:1.+'
+        implementation CoreDependencies.wire_translations
     }
 
     // TODO  Nasty hack to be able to build add only one wire-core flavor to the build
-
     // TODO  (I know, it sucks, will think of a better way to do this, and we need this
-
     // TODO   when there are different SE APIs in dev vs internal/prod)
     boolean internal = true
     for (String taskName : gradle.startParameter.taskNames) {
@@ -346,11 +335,6 @@ dependencies {
             break
         }
     }
-
-    // For using local files in app/libs
-    //implementation (name:'avs', ext:'aar')
-    //implementation (name:'audio-notifications', ext:'aar')
-    //implementation (name:'zmessaging-android', ext:'aar')
 
     implementation "$avsGroup:$avsName:${internal ? avsInternalVersion : avsVersion}"
     api(project(':wire-android-sync-engine:zmessaging')) {
@@ -393,9 +377,7 @@ dependencies {
     }
 
     //WorkManager
-    implementation("androidx.work:work-runtime:$versions.workManager") {
-        exclude group: 'androidx.room', module: 'room-runtime'
-    }
+    implementation(BuildDependencies.work_manager) { exclude group: 'androidx.room', module: 'room-runtime' }
     implementation "androidx.room:room-runtime:$rootProject.ext.versions.room"
 
     //third party libraries
@@ -437,26 +419,22 @@ dependencies {
     api project(":storage")
 
     // Unit Tests
-    testImplementation "junit:junit:$rootProject.ext.versions.junit"
-    testImplementation "org.mockito:mockito-core:$versions.mockito"
-    testImplementation "org.mockito:mockito-inline:$versions.mockito"
-    testImplementation "org.amshove.kluent:kluent:$versions.kluent"
-    testImplementation "androidx.paging:paging-common:2.0.0"
-    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$versions.coroutines"
-    testImplementation("$rootProject.deps.scalaTest") {
-        exclude module: 'scala-library'
-    }
-    testImplementation 'androidx.arch.core:core-testing:2.1.0'
-    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$versions.coroutines"
-    testImplementation "androidx.paging:paging-common:2.0.0"
+    testImplementation TestDependencies.junit
+    testImplementation TestDependencies.mockito_core
+    testImplementation TestDependencies.mockito_inline
+    testImplementation TestDependencies.kluent
+    testImplementation BuildDependencies.coroutines
+    testImplementation TestDependencies.coroutines_test
+    testImplementation TestDependencies.androidx_test_core
+    testImplementation(LegacyDependencies.scala_test) { exclude module: 'scala-library' }
 
-    // UI Tests
-    androidTestImplementation "junit:junit:$rootProject.ext.versions.junit"
-    androidTestImplementation "org.mockito:mockito-core:$versions.mockito"
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
-    androidTestImplementation 'androidx.test:rules:1.1.1'
-
-    androidTestImplementation "androidx.work:work-testing:$versions.workManager"
+    // Functional Tests
+    androidTestImplementation TestDependencies.junit
+    androidTestImplementation TestDependencies.mockito_core
+    androidTestImplementation TestDependencies.kluent
+    androidTestImplementation TestDependencies.androidx_test_junit
+    androidTestImplementation TestDependencies.androidx_test_rules
+    androidTestImplementation TestDependencies.androidx_work_manager_test
 
     ScalaCompileOptions.metaClass.daemonServer = true
     ScalaCompileOptions.metaClass.fork = true
@@ -502,7 +480,6 @@ android.applicationVariants.all { variant ->
         } else {
             newApkName = "${appName}-${output.baseName}-${majorVersion}${android.defaultConfig.versionCode}.apk"
         }
-
 
         output.outputFileName = new File("../..", newApkName)
     }
